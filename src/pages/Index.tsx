@@ -154,39 +154,80 @@ function Dashboard() {
   );
 }
 
+function ShiftBlock({
+  label, icon, saved, onSave,
+}: { label: string; icon: string; saved: boolean; onSave: (vol: string, cnt: string) => void }) {
+  const [vol, setVol] = useState('');
+  const [cnt, setCnt] = useState('');
+
+  const handleSave = () => {
+    if (!vol) return;
+    onSave(vol, cnt);
+  };
+
+  return (
+    <div className={`rounded-lg border-2 p-5 transition-all ${saved ? 'border-emerald-400 bg-emerald-50' : 'border-border'}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Icon name={icon} size={20} className={saved ? 'text-emerald-600' : 'text-primary'} />
+          <span className="font-display font-600 text-lg uppercase tracking-wide">{label}</span>
+        </div>
+        {saved && (
+          <span className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center animate-scale-in">
+            <Icon name="Check" size={15} className="text-white" />
+          </span>
+        )}
+      </div>
+      {saved ? (
+        <p className="text-sm text-emerald-700 font-500">Данные сохранены</p>
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-500 text-muted-foreground">Объём, л</label>
+            <Input type="number" placeholder="0.0" value={vol} onChange={(e) => setVol(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-xs font-500 text-muted-foreground">Дойных голов</label>
+            <Input type="number" placeholder="5" value={cnt} onChange={(e) => setCnt(e.target.value)} className="mt-1" />
+          </div>
+          <Button className="w-full" onClick={handleSave}>Сохранить</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Entry() {
+  const today = new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }).slice(0, 5);
+  const [entries, setEntries] = useState(herdEntries);
+  const [morningDone, setMorningDone] = useState(false);
+  const [eveningDone, setEveningDone] = useState(false);
+
+  const save = (shift: 'Утро' | 'Вечер') => (vol: string, cnt: string) => {
+    const newEntry = {
+      id: Date.now(),
+      date: today,
+      shift,
+      volume: parseFloat(vol),
+      cows: parseInt(cnt) || 5,
+    };
+    setEntries((prev) => [newEntry, ...prev]);
+    if (shift === 'Утро') setMorningDone(true);
+    else setEveningDone(true);
+  };
+
   return (
     <>
       <SectionHead title="Надой стада" sub="Регистрация общего объёма молока по дойкам" />
       <div className="grid lg:grid-cols-5 gap-6">
-        <Card className="lg:col-span-2 p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Новая дойка</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-500 text-foreground">Дата</label>
-              <Input type="date" className="mt-1.5" />
-            </div>
-            <div>
-              <label className="text-sm font-500 text-foreground">Смена</label>
-              <div className="grid grid-cols-2 gap-2 mt-1.5">
-                {['Утро', 'Вечер'].map((s) => (
-                  <button key={s} className="h-10 rounded-md border border-input text-sm font-500 hover:border-accent hover:text-accent transition-colors">{s}</button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-500 text-foreground">Общий объём по стаду, л</label>
-              <Input type="number" placeholder="0.0" className="mt-1.5" />
-            </div>
-            <div>
-              <label className="text-sm font-500 text-foreground">Дойных голов</label>
-              <Input type="number" placeholder="5" className="mt-1.5" />
-            </div>
-            <Button className="w-full" size="lg">
-              <Icon name="Check" size={18} className="mr-1" />Сохранить дойку
-            </Button>
+        <div className="lg:col-span-2 space-y-4 animate-fade-in">
+          <div>
+            <label className="text-sm font-500 text-foreground block mb-2">Дата</label>
+            <Input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
-        </Card>
+          <ShiftBlock label="Утро" icon="Sunrise" saved={morningDone} onSave={save('Утро')} />
+          <ShiftBlock label="Вечер" icon="Sunset" saved={eveningDone} onSave={save('Вечер')} />
+        </div>
 
         <Card className="lg:col-span-3 p-6 animate-fade-in">
           <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Журнал доек</h3>
@@ -201,7 +242,7 @@ function Entry() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {herdEntries.map((e) => (
+              {entries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-500">{e.date}</TableCell>
                   <TableCell><Badge variant="secondary">{e.shift}</Badge></TableCell>
