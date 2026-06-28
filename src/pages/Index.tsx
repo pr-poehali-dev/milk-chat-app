@@ -3,17 +3,18 @@ import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { cows, weeklyTotals, recentEntries, type Cow } from '@/data/farm';
+import { cows, weeklyTotals, herdEntries, noteMeta, type Cow, type NoteType } from '@/data/farm';
 
 type Section = 'dashboard' | 'entry' | 'analytics' | 'cows';
 
 const NAV: { id: Section; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Главная', icon: 'LayoutDashboard' },
-  { id: 'entry', label: 'Регистрация надоя', icon: 'ClipboardPlus' },
+  { id: 'entry', label: 'Надой стада', icon: 'ClipboardPlus' },
   { id: 'analytics', label: 'Аналитика', icon: 'TrendingUp' },
   { id: 'cows', label: 'Коровы', icon: 'Beef' },
 ];
@@ -26,21 +27,7 @@ const statusMap = {
 
 const maxYield = Math.max(...weeklyTotals.map((d) => d.value));
 const todayTotal = weeklyTotals[weeklyTotals.length - 1].value;
-
-function Sparkline({ data, color = 'currentColor' }: { data: number[]; color?: string }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data
-    .map((v, i) => `${(i / (data.length - 1)) * 100},${30 - ((v - min) / range) * 28 - 1}`)
-    .join(' ');
-  return (
-    <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-8">
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5"
-        vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+const weekTotal = weeklyTotals.reduce((a, b) => a + b.value, 0);
 
 const Index = () => {
   const [section, setSection] = useState<Section>('dashboard');
@@ -48,7 +35,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      {/* Sidebar */}
       <aside className="md:w-64 bg-primary text-primary-foreground flex md:flex-col shrink-0">
         <div className="px-6 py-6 flex items-center gap-3 border-b border-white/10 grow md:grow-0">
           <div className="w-10 h-10 rounded bg-accent flex items-center justify-center shrink-0">
@@ -64,7 +50,7 @@ const Index = () => {
             <button
               key={n.id}
               onClick={() => { setSection(n.id); setSelectedCow(null); }}
-              className={`flex items-center gap-3 px-4 md:px-4 py-3 md:rounded-md text-sm font-500 transition-colors w-full ${
+              className={`flex items-center gap-3 px-4 py-3 md:rounded-md text-sm font-500 transition-colors w-full ${
                 section === n.id ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
             >
@@ -78,9 +64,8 @@ const Index = () => {
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 p-5 md:p-10 max-w-6xl mx-auto w-full">
-        {section === 'dashboard' && <Dashboard onOpenCow={(c) => { setSelectedCow(c); setSection('cows'); }} />}
+        {section === 'dashboard' && <Dashboard />}
         {section === 'entry' && <Entry />}
         {section === 'analytics' && <Analytics />}
         {section === 'cows' && <Cows selected={selectedCow} onSelect={setSelectedCow} />}
@@ -120,21 +105,21 @@ function StatCard({ icon, label, value, unit, trend }: { icon: string; label: st
   );
 }
 
-function Dashboard({ onOpenCow }: { onOpenCow: (c: Cow) => void }) {
+function Dashboard() {
   const active = cows.filter((c) => c.status === 'active').length;
   return (
     <>
-      <SectionHead title="Сводка по ферме" sub="Ключевые показатели за текущий день" />
+      <SectionHead title="Сводка по ферме" sub="Ключевые показатели надоя по всему стаду" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard icon="Droplets" label="Надой сегодня" value={todayTotal.toFixed(1)} unit="л" trend={2.4} />
         <StatCard icon="Beef" label="Дойное стадо" value={String(active)} unit="гол" />
-        <StatCard icon="ChartNoAxesColumn" label="Средний надой" value="24.8" unit="л/гол" trend={3.1} />
+        <StatCard icon="Sigma" label="Надой за неделю" value={weekTotal.toFixed(0)} unit="л" trend={4.2} />
         <StatCard icon="Percent" label="Жирность" value="3.9" unit="%" trend={-0.2} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-6">Надой за неделю</h3>
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-6">Надой стада за неделю</h3>
           <div className="flex items-end justify-between gap-2 h-48">
             {weeklyTotals.map((d) => (
               <div key={d.day} className="flex-1 flex flex-col items-center gap-2 group">
@@ -148,18 +133,19 @@ function Dashboard({ onOpenCow }: { onOpenCow: (c: Cow) => void }) {
         </Card>
 
         <Card className="p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Лидеры стада</h3>
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Последние дойки</h3>
           <div className="space-y-3">
-            {[...cows].sort((a, b) => b.avgYield - a.avgYield).slice(0, 4).map((c, i) => (
-              <button key={c.id} onClick={() => onOpenCow(c)}
-                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-secondary transition-colors text-left">
-                <span className="w-6 h-6 rounded bg-secondary text-primary text-xs font-600 flex items-center justify-center shrink-0">{i + 1}</span>
+            {herdEntries.slice(0, 4).map((e) => (
+              <div key={e.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-secondary transition-colors">
+                <span className="w-9 h-9 rounded bg-secondary flex items-center justify-center shrink-0">
+                  <Icon name="Droplets" size={16} className="text-primary" />
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-500 truncate">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.tag}</p>
+                  <p className="text-sm font-500">{e.shift}</p>
+                  <p className="text-xs text-muted-foreground">{e.date}</p>
                 </div>
-                <span className="font-display font-600 text-sm">{c.avgYield} л</span>
-              </button>
+                <span className="font-display font-600 text-sm">{e.volume} л</span>
+              </div>
             ))}
           </div>
         </Card>
@@ -171,26 +157,14 @@ function Dashboard({ onOpenCow }: { onOpenCow: (c: Cow) => void }) {
 function Entry() {
   return (
     <>
-      <SectionHead title="Регистрация надоя" sub="Внесение объёмов молока по дойкам" />
+      <SectionHead title="Надой стада" sub="Регистрация общего объёма молока по дойкам" />
       <div className="grid lg:grid-cols-5 gap-6">
         <Card className="lg:col-span-2 p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Новая запись</h3>
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Новая дойка</h3>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-500 text-foreground">Корова</label>
-              <select className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
-                {cows.map((c) => <option key={c.id}>{c.name} — {c.tag}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-500 text-foreground">Объём, л</label>
-                <Input type="number" placeholder="0.0" className="mt-1.5" />
-              </div>
-              <div>
-                <label className="text-sm font-500 text-foreground">Жирность, %</label>
-                <Input type="number" placeholder="3.9" className="mt-1.5" />
-              </div>
+              <label className="text-sm font-500 text-foreground">Дата</label>
+              <Input type="date" className="mt-1.5" />
             </div>
             <div>
               <label className="text-sm font-500 text-foreground">Смена</label>
@@ -200,32 +174,40 @@ function Entry() {
                 ))}
               </div>
             </div>
+            <div>
+              <label className="text-sm font-500 text-foreground">Общий объём по стаду, л</label>
+              <Input type="number" placeholder="0.0" className="mt-1.5" />
+            </div>
+            <div>
+              <label className="text-sm font-500 text-foreground">Дойных голов</label>
+              <Input type="number" placeholder="5" className="mt-1.5" />
+            </div>
             <Button className="w-full" size="lg">
-              <Icon name="Check" size={18} className="mr-1" />Сохранить запись
+              <Icon name="Check" size={18} className="mr-1" />Сохранить дойку
             </Button>
           </div>
         </Card>
 
         <Card className="lg:col-span-3 p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Последние записи</h3>
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Журнал доек</h3>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Корова</TableHead>
+                <TableHead>Дата</TableHead>
                 <TableHead>Смена</TableHead>
-                <TableHead>Время</TableHead>
+                <TableHead className="text-right">Голов</TableHead>
                 <TableHead className="text-right">Объём</TableHead>
-                <TableHead className="text-right">Жир.</TableHead>
+                <TableHead className="text-right">На голову</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentEntries.map((e) => (
+              {herdEntries.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell className="font-500">{e.cow}</TableCell>
+                  <TableCell className="font-500">{e.date}</TableCell>
                   <TableCell><Badge variant="secondary">{e.shift}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground">{e.time}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{e.cows}</TableCell>
                   <TableCell className="text-right font-display font-600">{e.volume} л</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{e.fat}%</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{(e.volume / e.cows).toFixed(1)} л</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -237,35 +219,44 @@ function Entry() {
 }
 
 function Analytics() {
+  const avgDay = (weekTotal / 7).toFixed(1);
   return (
     <>
-      <SectionHead title="Аналитика надоев" sub="Динамика и тенденции по стаду" />
+      <SectionHead title="Аналитика надоев" sub="Динамика надоя по всему стаду" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon="Sigma" label="Надой за неделю" value="1051" unit="л" trend={4.2} />
-        <StatCard icon="TrendingUp" label="Рост к прошлой" value="+6.8" unit="%" trend={6.8} />
-        <StatCard icon="Award" label="Лучший день" value="159" unit="л" />
+        <StatCard icon="Sigma" label="Надой за неделю" value={weekTotal.toFixed(0)} unit="л" trend={4.2} />
+        <StatCard icon="ChartNoAxesColumn" label="Средний за день" value={avgDay} unit="л" trend={6.8} />
+        <StatCard icon="Award" label="Лучший день" value={String(maxYield)} unit="л" />
         <StatCard icon="Target" label="План выполнен" value="94" unit="%" trend={1.5} />
       </div>
-      <Card className="p-6 animate-fade-in">
-        <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Тенденции по коровам</h3>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {cows.map((c) => (
-            <div key={c.id} className="p-4 rounded-md border border-border/60">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="font-500 text-sm">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.tag}</p>
-                </div>
-                <span className={`text-xs font-600 flex items-center gap-0.5 ${c.trend >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  <Icon name={c.trend >= 0 ? 'ArrowUp' : 'ArrowDown'} size={12} />
-                  {Math.abs(c.trend)}%
-                </span>
-              </div>
-              <div className={c.trend >= 0 ? 'text-emerald-500' : 'text-red-500'}>
-                <Sparkline data={c.history} />
-              </div>
+      <Card className="p-6 animate-fade-in mb-6">
+        <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-6">Надой стада по дням</h3>
+        <div className="flex items-end justify-between gap-2 h-56">
+          {weeklyTotals.map((d) => (
+            <div key={d.day} className="flex-1 flex flex-col items-center gap-2 group">
+              <span className="text-xs font-600 text-muted-foreground">{d.value}</span>
+              <div className="w-full rounded-t bg-gradient-to-t from-primary to-accent transition-all hover:opacity-80"
+                style={{ height: `${(d.value / maxYield) * 100}%` }} />
+              <span className="text-xs text-muted-foreground">{d.day}</span>
             </div>
           ))}
+        </div>
+      </Card>
+      <Card className="p-6 animate-fade-in">
+        <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-4">Структура стада</h3>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {(['active', 'rest', 'sick'] as const).map((s) => {
+            const count = cows.filter((c) => c.status === s).length;
+            return (
+              <div key={s} className="p-4 rounded-md border border-border/60 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{statusMap[s].label}</p>
+                  <p className="font-display font-600 text-2xl mt-1">{count} <span className="text-sm font-400 text-muted-foreground">гол</span></p>
+                </div>
+                <Badge variant="outline" className={statusMap[s].cls}>{Math.round((count / cows.length) * 100)}%</Badge>
+              </div>
+            );
+          })}
         </div>
       </Card>
     </>
@@ -273,53 +264,11 @@ function Analytics() {
 }
 
 function Cows({ selected, onSelect }: { selected: Cow | null; onSelect: (c: Cow | null) => void }) {
-  if (selected) {
-    const st = statusMap[selected.status];
-    return (
-      <>
-        <button onClick={() => onSelect(null)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
-          <Icon name="ArrowLeft" size={16} /> Назад к списку
-        </button>
-        <div className="flex flex-wrap items-center gap-4 mb-8 animate-fade-in">
-          <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
-            <Icon name="Beef" size={30} className="text-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-display font-600 text-3xl tracking-tight uppercase">{selected.name}</h2>
-            <p className="text-muted-foreground">{selected.tag} · {selected.breed} · {selected.age} года</p>
-          </div>
-          <Badge variant="outline" className={`${st.cls} ml-auto`}>{st.label}</Badge>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard icon="Droplets" label="Средний надой" value={String(selected.avgYield)} unit="л" trend={selected.trend} />
-          <StatCard icon="Calendar" label="За 7 дней" value={selected.history.reduce((a, b) => a + b, 0).toFixed(0)} unit="л" />
-          <StatCard icon="ArrowUp" label="Максимум" value={String(Math.max(...selected.history))} unit="л" />
-          <StatCard icon="ArrowDown" label="Минимум" value={String(Math.min(...selected.history))} unit="л" />
-        </div>
-        <Card className="p-6 animate-fade-in">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">История надоев</h3>
-          <div className={`mb-6 ${selected.trend >= 0 ? 'text-accent' : 'text-red-500'}`}>
-            <Sparkline data={selected.history} />
-          </div>
-          <div className="flex items-end justify-between gap-2 h-40">
-            {selected.history.map((v, i) => {
-              const m = Math.max(...selected.history);
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="w-full rounded-t bg-primary/80" style={{ height: `${(v / m) * 100}%` }} />
-                  <span className="text-xs text-muted-foreground">{v}</span>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </>
-    );
-  }
+  if (selected) return <CowDetail cow={selected} onBack={() => onSelect(null)} />;
 
   return (
     <>
-      <SectionHead title="Стадо" sub="Карточки коров и показатели надоев" />
+      <SectionHead title="Стадо" sub="Карточки коров, статусы и заметки" />
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {cows.map((c) => {
           const st = statusMap[c.status];
@@ -334,18 +283,105 @@ function Cows({ selected, onSelect }: { selected: Cow | null; onSelect: (c: Cow 
               </div>
               <h3 className="font-display font-600 text-xl tracking-tight">{c.name}</h3>
               <p className="text-sm text-muted-foreground mb-4">{c.tag} · {c.breed}</p>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Средний надой</p>
-                  <p className="font-display font-600 text-2xl">{c.avgYield} <span className="text-sm text-muted-foreground font-400">л</span></p>
-                </div>
-                <div className={`w-20 ${c.trend >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  <Sparkline data={c.history} />
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon name="StickyNote" size={14} />
+                {c.notes.length > 0 ? `${c.notes.length} заметок` : 'Нет заметок'}
               </div>
             </Card>
           );
         })}
+      </div>
+    </>
+  );
+}
+
+function CowDetail({ cow, onBack }: { cow: Cow; onBack: () => void }) {
+  const [notes, setNotes] = useState(cow.notes);
+  const [type, setType] = useState<NoteType>('other');
+  const [text, setText] = useState('');
+  const st = statusMap[cow.status];
+
+  const addNote = () => {
+    if (!text.trim()) return;
+    const today = new Date();
+    const date = `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}`;
+    setNotes([{ id: Date.now(), type, date, text: text.trim() }, ...notes]);
+    setText('');
+    setType('other');
+  };
+
+  return (
+    <>
+      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors">
+        <Icon name="ArrowLeft" size={16} /> Назад к списку
+      </button>
+      <div className="flex flex-wrap items-center gap-4 mb-8 animate-fade-in">
+        <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
+          <Icon name="Beef" size={30} className="text-primary-foreground" />
+        </div>
+        <div>
+          <h2 className="font-display font-600 text-3xl tracking-tight uppercase">{cow.name}</h2>
+          <p className="text-muted-foreground">{cow.tag} · {cow.breed} · {cow.age} года</p>
+        </div>
+        <Badge variant="outline" className={`${st.cls} ml-auto`}>{st.label}</Badge>
+      </div>
+
+      <div className="grid lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-2 p-6 animate-fade-in h-fit">
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Новая заметка</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-500 text-foreground">Тип</label>
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                {(Object.keys(noteMeta) as NoteType[]).map((t) => (
+                  <button key={t} onClick={() => setType(t)}
+                    className={`h-10 rounded-md border text-sm font-500 flex items-center justify-center gap-1.5 transition-colors ${
+                      type === t ? 'border-accent text-accent bg-accent/5' : 'border-input hover:border-accent/50'
+                    }`}>
+                    <Icon name={noteMeta[t].icon} size={15} />{noteMeta[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-500 text-foreground">Описание</label>
+              <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} placeholder="Что произошло..." className="mt-1.5 resize-none" />
+            </div>
+            <Button className="w-full" onClick={addNote}>
+              <Icon name="Plus" size={18} className="mr-1" />Добавить заметку
+            </Button>
+          </div>
+        </Card>
+
+        <Card className="lg:col-span-3 p-6 animate-fade-in">
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">История заметок</h3>
+          {notes.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Icon name="StickyNote" size={36} className="mx-auto mb-3 opacity-40" />
+              <p>Заметок пока нет</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notes.map((n) => {
+                const m = noteMeta[n.type];
+                return (
+                  <div key={n.id} className="flex gap-3 p-4 rounded-md border border-border/60 animate-scale-in">
+                    <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center shrink-0">
+                      <Icon name={m.icon} size={18} className="text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="outline" className={m.cls}>{m.label}</Badge>
+                        <span className="text-xs text-muted-foreground">{n.date}</span>
+                      </div>
+                      <p className="text-sm text-foreground">{n.text}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
       </div>
     </>
   );
