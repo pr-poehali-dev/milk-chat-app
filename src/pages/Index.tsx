@@ -41,7 +41,7 @@ const Index = () => {
             <Icon name="Milk" size={22} className="text-white" />
           </div>
           <div className="hidden md:block">
-            <h1 className="font-display font-600 text-lg leading-none tracking-wide">Musoft</h1>
+            <h1 className="font-display font-600 text-lg leading-none tracking-wide">Учёт молока</h1>
             <p className="text-xs text-white/50 mt-1">управление стадом</p>
           </div>
         </div>
