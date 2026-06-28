@@ -10,15 +10,13 @@ import {
 } from '@/components/ui/table';
 import { cows, weeklyTotals, herdEntries, noteMeta, type Cow, type NoteType } from '@/data/farm';
 
-type Section = 'dashboard' | 'entry' | 'analytics' | 'cows' | 'bulls' | 'sheep';
+type Section = 'dashboard' | 'entry' | 'analytics' | 'cows';
 
 const NAV: { id: Section; label: string; icon: string; emoji?: string }[] = [
   { id: 'dashboard', label: 'Главная', icon: 'LayoutDashboard' },
   { id: 'entry', label: 'Надой стада', icon: 'ClipboardPlus' },
   { id: 'analytics', label: 'Аналитика', icon: 'TrendingUp' },
   { id: 'cows', label: 'Коровы', icon: '', emoji: '🐄' },
-  { id: 'bulls', label: 'Бычки', icon: '', emoji: '🐂' },
-  { id: 'sheep', label: 'Овцы', icon: '', emoji: '🐑' },
 ];
 
 const statusMap = {
@@ -43,8 +41,8 @@ const Index = () => {
             <Icon name="Milk" size={22} className="text-white" />
           </div>
           <div className="hidden md:block">
-            <h1 className="font-display font-600 text-lg leading-none tracking-wide">МОЛОКОУЧЁТ</h1>
-            <p className="text-xs text-white/50 mt-1">ферма «Рассвет»</p>
+            <h1 className="font-display font-600 text-lg leading-none tracking-wide">Musoft</h1>
+            <p className="text-xs text-white/50 mt-1">управление стадом</p>
           </div>
         </div>
         <nav className="flex md:flex-col md:p-3 md:gap-1">
@@ -74,8 +72,6 @@ const Index = () => {
         {section === 'entry' && <Entry />}
         {section === 'analytics' && <Analytics />}
         {section === 'cows' && <Cows selected={selectedCow} onSelect={setSelectedCow} />}
-        {section === 'bulls' && <SimpleAnimalList title="Бычки" emoji="🐂" sub="Учёт бычков на ферме" />}
-        {section === 'sheep' && <SimpleAnimalList title="Овцы" emoji="🐑" sub="Учёт овец на ферме" />}
       </main>
     </div>
   );
@@ -435,70 +431,6 @@ function CowDetail({ cow, onBack }: { cow: Cow; onBack: () => void }) {
   );
 }
 
-interface Animal { id: number; name: string; tag: string; age: number; status: string; }
 
-function SimpleAnimalList({ title, emoji, sub }: { title: string; emoji: string; sub: string }) {
-  const [animals, setAnimals] = useState<Animal[]>([]);
-  const [name, setName] = useState('');
-  const [tag, setTag] = useState('');
-  const [age, setAge] = useState('');
-
-  const add = () => {
-    if (!name.trim()) return;
-    setAnimals((prev) => [...prev, { id: Date.now(), name: name.trim(), tag: tag.trim() || '—', age: parseInt(age) || 0, status: 'active' }]);
-    setName(''); setTag(''); setAge('');
-  };
-
-  return (
-    <>
-      <SectionHead title={title} sub={sub} />
-      <div className="grid lg:grid-cols-5 gap-6">
-        <Card className="lg:col-span-2 p-6 animate-fade-in h-fit">
-          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Добавить животное</h3>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-500 text-foreground">Кличка</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, Буян" className="mt-1.5" />
-            </div>
-            <div>
-              <label className="text-sm font-500 text-foreground">Бирка</label>
-              <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="RU-0001" className="mt-1.5" />
-            </div>
-            <div>
-              <label className="text-sm font-500 text-foreground">Возраст (лет)</label>
-              <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="1" className="mt-1.5" />
-            </div>
-            <Button className="w-full" onClick={add}>
-              <Icon name="Plus" size={18} className="mr-1" />Добавить
-            </Button>
-          </div>
-        </Card>
-
-        <div className="lg:col-span-3 animate-fade-in">
-          {animals.length === 0 ? (
-            <Card className="p-12 flex flex-col items-center justify-center text-center text-muted-foreground">
-              <span className="text-5xl mb-4">{emoji}</span>
-              <p className="font-500">Список пуст</p>
-              <p className="text-sm mt-1">Добавьте первое животное</p>
-            </Card>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              {animals.map((a) => (
-                <Card key={a.id} className="p-5 animate-scale-in border-border/60">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-11 h-11 rounded-md bg-secondary flex items-center justify-center text-2xl">{emoji}</div>
-                    <Badge variant="secondary">В строю</Badge>
-                  </div>
-                  <h3 className="font-display font-600 text-xl tracking-tight">{a.name}</h3>
-                  <p className="text-sm text-muted-foreground">{a.tag} · {a.age} лет</p>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
 
 export default Index;
