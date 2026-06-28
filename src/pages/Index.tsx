@@ -10,13 +10,15 @@ import {
 } from '@/components/ui/table';
 import { cows, weeklyTotals, herdEntries, noteMeta, type Cow, type NoteType } from '@/data/farm';
 
-type Section = 'dashboard' | 'entry' | 'analytics' | 'cows';
+type Section = 'dashboard' | 'entry' | 'analytics' | 'cows' | 'bulls' | 'sheep';
 
-const NAV: { id: Section; label: string; icon: string }[] = [
+const NAV: { id: Section; label: string; icon: string; emoji?: string }[] = [
   { id: 'dashboard', label: 'Главная', icon: 'LayoutDashboard' },
   { id: 'entry', label: 'Надой стада', icon: 'ClipboardPlus' },
   { id: 'analytics', label: 'Аналитика', icon: 'TrendingUp' },
-  { id: 'cows', label: 'Коровы', icon: 'Beef' },
+  { id: 'cows', label: 'Коровы', icon: '', emoji: '🐄' },
+  { id: 'bulls', label: 'Бычки', icon: '', emoji: '🐂' },
+  { id: 'sheep', label: 'Овцы', icon: '', emoji: '🐑' },
 ];
 
 const statusMap = {
@@ -54,7 +56,10 @@ const Index = () => {
                 section === n.id ? 'bg-white/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <Icon name={n.icon} size={18} />
+              {n.emoji
+                ? <span className="text-lg w-[18px] text-center leading-none">{n.emoji}</span>
+                : <Icon name={n.icon} size={18} />
+              }
               <span className="hidden md:inline">{n.label}</span>
             </button>
           ))}
@@ -69,6 +74,8 @@ const Index = () => {
         {section === 'entry' && <Entry />}
         {section === 'analytics' && <Analytics />}
         {section === 'cows' && <Cows selected={selectedCow} onSelect={setSelectedCow} />}
+        {section === 'bulls' && <SimpleAnimalList title="Бычки" emoji="🐂" sub="Учёт бычков на ферме" />}
+        {section === 'sheep' && <SimpleAnimalList title="Овцы" emoji="🐑" sub="Учёт овец на ферме" />}
       </main>
     </div>
   );
@@ -317,8 +324,8 @@ function Cows({ selected, onSelect }: { selected: Cow | null; onSelect: (c: Cow 
             <Card key={c.id} onClick={() => onSelect(c)}
               className="p-5 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all animate-scale-in border-border/60">
               <div className="flex items-start justify-between mb-4">
-                <div className="w-11 h-11 rounded-md bg-secondary flex items-center justify-center">
-                  <Icon name="Beef" size={22} className="text-primary" />
+                <div className="w-11 h-11 rounded-md bg-secondary flex items-center justify-center text-2xl">
+                  🐄
                 </div>
                 <Badge variant="outline" className={st.cls}>{st.label}</Badge>
               </div>
@@ -357,8 +364,8 @@ function CowDetail({ cow, onBack }: { cow: Cow; onBack: () => void }) {
         <Icon name="ArrowLeft" size={16} /> Назад к списку
       </button>
       <div className="flex flex-wrap items-center gap-4 mb-8 animate-fade-in">
-        <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center">
-          <Icon name="Beef" size={30} className="text-primary-foreground" />
+        <div className="w-16 h-16 rounded-lg bg-primary flex items-center justify-center text-4xl">
+          🐄
         </div>
         <div>
           <h2 className="font-display font-600 text-3xl tracking-tight uppercase">{cow.name}</h2>
@@ -423,6 +430,72 @@ function CowDetail({ cow, onBack }: { cow: Cow; onBack: () => void }) {
             </div>
           )}
         </Card>
+      </div>
+    </>
+  );
+}
+
+interface Animal { id: number; name: string; tag: string; age: number; status: string; }
+
+function SimpleAnimalList({ title, emoji, sub }: { title: string; emoji: string; sub: string }) {
+  const [animals, setAnimals] = useState<Animal[]>([]);
+  const [name, setName] = useState('');
+  const [tag, setTag] = useState('');
+  const [age, setAge] = useState('');
+
+  const add = () => {
+    if (!name.trim()) return;
+    setAnimals((prev) => [...prev, { id: Date.now(), name: name.trim(), tag: tag.trim() || '—', age: parseInt(age) || 0, status: 'active' }]);
+    setName(''); setTag(''); setAge('');
+  };
+
+  return (
+    <>
+      <SectionHead title={title} sub={sub} />
+      <div className="grid lg:grid-cols-5 gap-6">
+        <Card className="lg:col-span-2 p-6 animate-fade-in h-fit">
+          <h3 className="font-display font-500 text-lg uppercase tracking-wide mb-5">Добавить животное</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-500 text-foreground">Кличка</label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, Буян" className="mt-1.5" />
+            </div>
+            <div>
+              <label className="text-sm font-500 text-foreground">Бирка</label>
+              <Input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="RU-0001" className="mt-1.5" />
+            </div>
+            <div>
+              <label className="text-sm font-500 text-foreground">Возраст (лет)</label>
+              <Input type="number" value={age} onChange={(e) => setAge(e.target.value)} placeholder="1" className="mt-1.5" />
+            </div>
+            <Button className="w-full" onClick={add}>
+              <Icon name="Plus" size={18} className="mr-1" />Добавить
+            </Button>
+          </div>
+        </Card>
+
+        <div className="lg:col-span-3 animate-fade-in">
+          {animals.length === 0 ? (
+            <Card className="p-12 flex flex-col items-center justify-center text-center text-muted-foreground">
+              <span className="text-5xl mb-4">{emoji}</span>
+              <p className="font-500">Список пуст</p>
+              <p className="text-sm mt-1">Добавьте первое животное</p>
+            </Card>
+          ) : (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {animals.map((a) => (
+                <Card key={a.id} className="p-5 animate-scale-in border-border/60">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-11 h-11 rounded-md bg-secondary flex items-center justify-center text-2xl">{emoji}</div>
+                    <Badge variant="secondary">В строю</Badge>
+                  </div>
+                  <h3 className="font-display font-600 text-xl tracking-tight">{a.name}</h3>
+                  <p className="text-sm text-muted-foreground">{a.tag} · {a.age} лет</p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
