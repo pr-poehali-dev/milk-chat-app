@@ -48,7 +48,7 @@ export const cows: Cow[] = [
 export interface HerdEntry {
   id: number;
   date: string;
-  shift: 'Утро' | 'День' | 'Вечер';
+  shift: 'Утро' | 'Вечер';
   volume: number;
   cows: number;
 }
@@ -56,9 +56,9 @@ export interface HerdEntry {
 export const herdEntries: HerdEntry[] = [
   { id: 1, date: '28.06', shift: 'Утро', volume: 58.4, cows: 5 },
   { id: 2, date: '27.06', shift: 'Вечер', volume: 52.1, cows: 5 },
-  { id: 3, date: '27.06', shift: 'День', volume: 38.2, cows: 5 },
-  { id: 4, date: '27.06', shift: 'Утро', volume: 57.9, cows: 5 },
-  { id: 5, date: '26.06', shift: 'Вечер', volume: 51.6, cows: 5 },
+  { id: 3, date: '27.06', shift: 'Утро', volume: 57.9, cows: 5 },
+  { id: 4, date: '26.06', shift: 'Вечер', volume: 51.6, cows: 5 },
+  { id: 5, date: '26.06', shift: 'Утро', volume: 59.2, cows: 5 },
 ];
 
 export const weeklyTotals = [

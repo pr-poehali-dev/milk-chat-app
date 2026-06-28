@@ -168,8 +168,8 @@ function Entry() {
             </div>
             <div>
               <label className="text-sm font-500 text-foreground">Смена</label>
-              <div className="grid grid-cols-3 gap-2 mt-1.5">
-                {['Утро', 'День', 'Вечер'].map((s) => (
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                {['Утро', 'Вечер'].map((s) => (
                   <button key={s} className="h-10 rounded-md border border-input text-sm font-500 hover:border-accent hover:text-accent transition-colors">{s}</button>
                 ))}
               </div>
